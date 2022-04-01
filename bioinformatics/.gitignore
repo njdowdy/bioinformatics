@@ -1,0 +1,5 @@
+__pycache__
+.venv/*
+bioinformatics/input/*
+bioinformatics/output/*
+bioinformatics/src/*
