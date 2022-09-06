@@ -1,8 +1,9 @@
-from typing import List
+import re
+from typing import List, Optional
 from Bio import SeqIO, Seq, SeqRecord
 import numpy as np
 from bioinformatics.functions.file_utils import (
-    inject_parent_directory,
+    inject_grandparent_directory,
     inject_prefix_suffix,
     create_parent_directory,
 )
@@ -180,13 +181,15 @@ def get_best_orf(in_file: str) -> int:
     return find_best_orf(orf_list)
 
 
-def fix_dna_alignment(in_file: str, best_orf: int):
+def fix_dna_alignment(in_file: str, best_orf: Optional[int] = None):
+    if best_orf is None:
+        best_orf = get_best_orf(in_file)
     orf1_aln = []
     aln = SeqIO.parse(in_file, "fasta")
     for seq in aln:
         adj = get_adjustment_bases(seq.seq)
         orf1_aln.append(set_to_orf1(seq, best_orf, adj))
-    out_file = inject_parent_directory(in_file, "ORF1")
+    out_file = inject_grandparent_directory(in_file, "ORF1")
     create_parent_directory(out_file)
     out_file = inject_prefix_suffix(out_file, "ORF1_", "")
     SeqIO.write(orf1_aln, out_file, "fasta")
@@ -223,3 +226,16 @@ def set_to_orf1(
         dna_out = dna_out + adjust_chars[1]
     seq.seq = dna_out
     return seq
+
+
+def find_orfs(sequence: Seq):
+    pattern = re.compile(r"(?=(ATG(?:...)*?)(?=TAG|TGA|TAA))")
+
+    # sequence= "CATGCTCAGCGAGGACAGCAAGGGCCCATTTACAGGAGCATAGTAA"
+
+    sequence_rev_comp = sequence.reverse().maketrans(
+        "ATGC", "TACG"
+    )  # reverse complement
+
+    print(pattern.findall(Seq))  # forward search
+    print(pattern.findall(Seq[::-1].translate(sequence_rev_comp)))  # backward search

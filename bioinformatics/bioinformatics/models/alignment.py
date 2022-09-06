@@ -1,4 +1,3 @@
-from pydantic import BaseModel
 from enum import Enum
 
 
@@ -16,8 +15,3 @@ class AlignmentOutputFormat(str, Enum):
     selex = "selex"
     st = "stockholm"
     vie = "vienna"
-
-
-class TrimSoftware(str, Enum):
-    trimAl = "trimal"
-    bmge = "bmge"

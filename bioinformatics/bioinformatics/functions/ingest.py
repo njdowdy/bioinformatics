@@ -1,20 +1,23 @@
 from io import TextIOWrapper
-import re
-from typing import Optional, List, TextIO
-from Bio import SeqIO
+from typing import Optional, List
+from Bio import SeqIO, SeqRecord
 from Bio.SeqIO.FastaIO import FastaIterator
-from Bio.SeqIO import SeqRecord
-from Bio import AlignIO
-from Bio.Align import AlignInfo
-from bioinformatics.functions.file_utils import create_parent_directory, suffix_parser
+from bioinformatics.functions.file_utils import (
+    parse_output_file_name,
+    suffix_parser,
+)
 
 
-def parse_output_file_name(in_file: str, output_folder: str = "output") -> str:
+def read_seq_file(in_file: str) -> SeqIO:
     suffix = suffix_parser(in_file)
-    output_file = re.sub(rf"{suffix}$", f".out{suffix}", in_file).replace("..", ".")
-    output_file = re.sub(r"/input/fasta/", f"/{output_folder}/", output_file)
-    create_parent_directory(output_file)
-    return output_file
+    records = SeqIO.parse(in_file, suffix)
+    return records
+
+
+def write_seq_file(
+    records: list[SeqRecord.SeqRecord], out_file: str, suffix: str
+) -> None:
+    SeqIO.write(records, out_file, suffix)
 
 
 def substring_label_search(
@@ -51,34 +54,6 @@ def filter_fasta_by_label(
         #     print(f"Taxa Grabbed for: {output_file}")
 
 
-def generate_consensus(fasta: str, threshold: Optional[float] = 0.5):
-    # fasta = 'bioinformatics/output/taxon_filtered_alignments/ZFMK1/EOG090R0A51_3.final.out.fas'
-    output_file = parse_output_file_name(fasta).replace(".out.out", ".out")
-    subfolders_to_replace = "/".join(
-        output_file.split("/")[output_file.split("/").index("output") + 1 : -2]
-    )
-    output_file = output_file.replace(f"{subfolders_to_replace}", "consensus_sequences")
-    locus_name = (
-        re.search(r"consensus_sequences/(.*?)\.out", output_file)
-        .group(1)
-        .replace("/", ".")
-    )
-    try:
-        alignment = AlignIO.read(fasta, "fasta")
-    except:
-        print("Alignment was empty or malformed. Skipping.")
-        pass
-    else:
-        summary_align = AlignInfo.SummaryInfo(alignment)
-        consensus = summary_align.dumb_consensus(threshold, "N")
-        my_seqs = SeqRecord(
-            consensus, id="", description=f"{locus_name}_{threshold*100}%_consensus"
-        )
-        create_parent_directory(output_file)
-        SeqIO.write(my_seqs, output_file, "fasta")
-
-
-
 def get_all_tips(fasta: str, tip_list: str = []):
     for seq_record in SeqIO.parse(fasta, "fasta"):
         locus_name = ".".join(fasta.split("/")[-1].split(".")[0:-1])
@@ -86,3 +61,39 @@ def get_all_tips(fasta: str, tip_list: str = []):
         if not name in tip_list:
             tip_list.append(name)
     return tip_list
+
+
+def get_molecular_data_type(input_file: str) -> str:
+    nucleotides = ["A", "C", "T", "G"]
+    amino_acids = [
+        "R",
+        "D",
+        "C",
+        "E",
+        "Q",
+        "G",
+        "H",
+        "I",
+        "L",
+        "K",
+        "M",
+        "F",
+        "P",
+        "S",
+        "T",
+        "W",
+        "Y",
+        "V",
+    ]
+    with open(input_file) as f:
+        for line in f:
+            try:
+                if ">" not in line:
+                    if any(nucleotide in line.upper() for nucleotide in nucleotides):
+                        return "nucl"
+                    elif any(amino_acid in line.upper() for amino_acid in amino_acids):
+                        return "Protein"
+                    else:
+                        raise ValueError("Could not parse data type")
+            except ValueError:
+                raise
