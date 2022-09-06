@@ -1,35 +1,32 @@
-import os
-import re
-import subprocess
 from typing import Optional
-from Bio import AlignIO, SeqIO, Seq
+from Bio import AlignIO, Seq
 from bioinformatics.functions.file_utils import (
     replace_parent_directory,
     suffix_parser,
     create_parent_directory,
     inject_parent_directory,
+    replace_suffix,
 )
 from bioinformatics.models.alignment import (
     AlignmentOutputFormat,
     AlignmentSoftware,
-    TrimSoftware,
 )
+from bioinformatics.functions.file_utils import generate_process
+from bioinformatics.functions.ingest import read_seq_file, write_seq_file
 
 
 def pad_alignment(in_file: str, ambiguious_char: Optional[str] = "-") -> None:
     suffix = suffix_parser(in_file)
-    records = SeqIO.parse(in_file, suffix)
-    records = list(records)
+    records = list(read_seq_file(in_file))
     maxlen = max(len(record.seq) for record in records)
     for record in records:
         if len(record.seq) != maxlen:
             sequence = str(record.seq).ljust(maxlen, ambiguious_char)
             record.seq = Seq.Seq(sequence)
     output_file = inject_parent_directory(in_file, "padded")
-    output_file = f"{output_file}.{suffix}"
+    output_file = replace_suffix(output_file, suffix)
     create_parent_directory(output_file)
-    with open(output_file, "w") as f:
-        SeqIO.write(records, f, suffix)
+    write_seq_file(records, output_file, suffix)
 
 
 def align_pairwise(
@@ -57,11 +54,9 @@ def convert_format(
     in_file_suffix = suffix_parser(in_file)
     if not in_file_format:
         in_file_format = format_parser(in_file_suffix)
-
     out_file_suffix = suffix_parser(out_file)
     if not out_file_format:
         out_file_format = format_parser(out_file_suffix)
-
     create_parent_directory(out_file)
     alignments = AlignIO.parse(in_file, in_file_format)
     AlignIO.write(alignments, open(out_file, "w"), out_file_format)
@@ -72,16 +67,18 @@ def perform_alignment(
     aligner: AlignmentSoftware,
     output_format: AlignmentOutputFormat,
     iterations: Optional[int] = None,
+    stdout: bool = False,
 ) -> None:
     # in_file = 'bioinformatics/input/fasta/LEP1/L1.fa'
     # aligner = AlignmentSoftware("clustal_omega")
     # output_format = AlignmentOutputFormat("fasta")
     # iterations = 5
+
     output_format = output_format.name
     out_file = replace_parent_directory(
-        in_file, "input/fasta", f"output/alignments/{aligner.name}"
+        in_file, "/".join(in_file.split("/")[1:3]), f"output/alignments/{aligner.name}"
     )
-    out_file = out_file.replace(suffix_parser(out_file), "." + output_format)
+    out_file = out_file.replace(suffix_parser(out_file), output_format)
     create_parent_directory(out_file)
     if not iterations:
         iterations = 1
@@ -122,31 +119,4 @@ def perform_alignment(
         )
     else:
         raise Exception("Alignment software choice not understood.")
-    subprocess.run(
-        cmd,
-    )
-
-
-def trim_alignment(
-    trimmer: TrimSoftware,
-) -> None:  # (construct calls to the BMGE and/or trimal programs; trimal preferred)
-    cmd = []
-    if trimmer.name == "trimAl":
-        src = "bioinformatcs/src/trimming/trimal-1.4.1/source/trimal"
-    elif trimmer.name == "bmge":
-        src = "java -jar bioinformatcs/src/trimming/BMGE-1.12/BMGE.jar"
-    subprocess.run(
-        cmd,
-    )
-
-
-# def create_aa_alignment()  # will require a function to calculate reading frame
-# def get_reading_frame()
-
-
-
-
-# def partition_codon_position()
-# def partition_probe_flank()  # will require a function to get probe and flank (see Breinholt code)
-# def create_nt12_all_alignment()  # the data with only first and second codon positions included
-# def create_nt12_degen_alignment()  # the data which codes for only non-synonymous changes
+    generate_process(cmd, stdout)
