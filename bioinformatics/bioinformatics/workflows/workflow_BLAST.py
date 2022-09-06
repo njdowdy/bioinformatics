@@ -4,13 +4,15 @@ from bioinformatics.functions.tasks import (
     pad_alignments,
 )
 from bioinformatics.functions.file_utils import combine_files
-from bioinformatics.functions.alignment import perform_alignment
+from bioinformatics.functions.align import perform_alignment
 from bioinformatics.functions.blast import create_blast_db
+
+input_folder = "bioinformatics/input/fasta/LEP1/"
 
 # step 1
 subset_fasta_alignments()
 # step 2
-pad_alignments()
+pad_alignments(input_folder)
 # step 3
 perform_alignment()
 # step 4 (optional) - trim alignments
