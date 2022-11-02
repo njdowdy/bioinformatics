@@ -12,7 +12,11 @@ def rearrange_supports(input_folder: str, **kwargs) -> None:
 
 
 def rearrange_support(
-    in_file: str, output_suffix: str, bs_order: list[int], boot_tree_sep: str = ";"
+    in_file: str,
+    bs_order: list[int],
+    output_prefix: str = "",
+    output_suffix: str = "_output",
+    boot_tree_sep: str = ";",
 ) -> None:
     # in_file = 'bioinformatics/input/test_files/supports/L1.treefile'
     # in_file = 'bioinformatics/input/test_files/supports/L1.ufboot'
@@ -20,6 +24,11 @@ def rearrange_support(
         search_string = "\)" + "([0-9|\.]+)\/" * (len(bs_order) - 1) + "([0-9|\.]+)\:"
         replace_string = ")\\" + "/\\".join([str(x) for x in bs_order]) + ":"
         filename = in_file.split(".")[0]
+        filename = (
+            "/".join(filename.split("/")[0:-1])
+            + '/' + output_prefix
+            + filename.split("/")[-1]
+        )
         suffix = in_file.split(".")[-1]
         with open(in_file, "r") as f:  # read tree
             contents = f.read()
